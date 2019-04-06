@@ -44,13 +44,21 @@ var TaskModel = require('./models/task')
 var userRoute = router.route('/users');
 var taskRoute = router.route('/tasks');
 
+// taskRoute.get(async (request, response) => {
+//     try{
+//     await TaskModel.deleteMany({}).exec();
+//     } catch(err) {
+
+//     }
+// });
+
 userRoute.get(async (request, response) => {
 
     try {
-        var query = UserModel.find(request.query.where);
-        if(request.query.select) {
-            query.select(JSON.parse(request.query.select));
-            console.log('select' + JSON.parse(request.query.select));
+        var query = UserModel.find();
+        if(request.query.where) {
+            query.where(JSON.parse(request.query.where));
+            console.log('where' + JSON.parse(request.query.where));
         }
         if(request.query.sort) {
             query.sort(JSON.parse(request.query.sort));
@@ -65,7 +73,11 @@ userRoute.get(async (request, response) => {
             console.log('limit' + parseInt(request.query.limit));
         }
         var result = await query.exec();
-        response.send(result);
+        var resMsg = {
+            message: "Ok",
+            data: result
+        };
+        response.send(resMsg);
     } catch (error) {
         response.status(500).send(error);
     }
@@ -103,10 +115,19 @@ userRoute.post(async (request, response) => {
     } 
     user.save()
     .then(_ => {
-        response.send(user);
+        var resMsg = {
+            message: "Created user!",
+            data: user
+        };
+        response.status(201).send(resMsg);
+        // response.send(user);
     })
     .catch(err => {
-        response.status(500).send(err);
+        var errMsg = {
+            message: "Got error when creating user!",
+            error: err
+        };
+        response.status(500).send(errMsg);
     })
 
 });
@@ -115,12 +136,20 @@ router.get("/users/:id", async (request, response) => {
     UserModel.findById(request.params.id, (err, docs) => {
         if(docs === null || docs === undefined) {
             console.log('has error' + err);
-            console.log('docs'  + docs);
-            response.status(404).send(err);
+            var errMsg = {
+                message: "User not found!", 
+                error: err
+            }
+            response.status(404).send(errMsg);
+            // response.status(404).send(err);
         } else {
-            console.log('error' + err);
-            console.log('has docs'  + docs);
-            response.send(docs);
+            // console.log('has docs'  + docs);
+            var resMsg = {
+                message: "Ok",
+                data: docs
+            };
+            response.send(resMsg);
+            // response.send(docs);
         }
     });
 });
@@ -135,7 +164,11 @@ router.put("/users/:id", async (request, response) => {
     UserModel.findById(request.params.id, (err, docs) => {
         if(err || docs === null || docs === undefined) {
             console.log('has error' + err);
-            response.status(404).send(err);
+            var errMsg = {
+                message: "User not found!", 
+                error: err
+            }
+            response.status(404).send(errMsg);
         } else {
             console.log('put user request body' + request.body);
             console.log('has docs'  + docs);
@@ -164,8 +197,12 @@ router.put("/users/:id", async (request, response) => {
                     .catch(err => {
                         console.log('find task got error' + err);
                     })
-                response.send(docs);
-
+                    var resMsg = {
+                        message: "Ok",
+                        data: docs
+                    };
+                    response.send(resMsg);
+                    // response.send(docs);
                 }
             }
 
@@ -235,29 +272,44 @@ router.delete("/users/:id", async (request, response) => {
         console.log('error' + err);
         console.log('docs'  + docs);
         if(docs === null || docs === undefined) {
-            response.status(404).send(err);
-            // return;
+            var errMsg = {
+                message: "User not found!", 
+                error: err
+            }
+            response.status(404).send(errMsg);
+            // response.status(404).send(err);
         } else {
             // console.log('user' + docs);
-            TaskModel.find({ assignedUser: request.params.id}).exec()
+            // TaskModel.find({ assignedUser: request.params.id})
+            // .then(res => {
+            TaskModel.updateMany({assignedUser: request.params.id}, 
+                {assignedUser: "", assignedUserName: "unassigned"}
+                )
+            .catch(err => {
+                console.log('related tasks err' + err);
+            });
+            // })
+            // .catch(err => {
+            //     console.log('no related tasks');
+            // });
+    
+            UserModel.deleteOne({ _id: request.params.id })
             .then(res => {
-                TaskModel.updateMany({assignedUser: request.params.id}, 
-                    {assignedUser: '', assignedUserName: "unassigned"}
-                    )
-                    .catch(err => {
-                        console.log('related tasks err' + err);
-                    })
+                var resMsg = {
+                    message: "Updated user!",
+                    data: request.body, 
+                    result: res
+                };
+                response.send(resMsg);
+                // response.send(res);
             })
             .catch(err => {
-                console.log('no related tasks');
-            });
-    
-            UserModel.deleteOne({ _id: request.params.id }).exec()
-            .then(res => {
-                response.send(result);
-            })
-            .catch(error => {
-                response.status(500).send(error);
+                var errMsg = {
+                    message: "Got server internal error!", 
+                    error: err
+                }
+                response.status(500).send(errMsg);
+                // response.status(500).send(error);
             });
         }        
     });
@@ -305,7 +357,11 @@ router.delete("/users/:id", async (request, response) => {
 
 taskRoute.get(async (request, response) => {
     try {
-        var query = TaskModel.find(request.query.where);
+        var query = TaskModel.find();
+        if(request.query.where) {
+            query.where(JSON.parse(request.query.where));
+            console.log('where' + JSON.parse(request.query.where));
+        }
         if(request.query.select) {
             query.select(JSON.parse(request.query.select));
             console.log('select' + JSON.parse(request.query.select));
@@ -323,9 +379,19 @@ taskRoute.get(async (request, response) => {
             console.log('limit' + parseInt(request.query.limit));
         }
         var result = await query.exec();
-        response.send(result);
+        var resMsg = {
+            message: "Ok",
+            data: result
+        };
+        response.send(resMsg);
+        // response.send(result);
     } catch (error) {
-        response.status(500).send(error);
+        var errMsg = {
+            message: "Got server internal error!", 
+            error: err
+        }
+        response.status(500).send(errMsg);
+        // response.status(500).send(error);
     }
 });
 
@@ -351,23 +417,50 @@ taskRoute.post(async (request, response) => {
         })
         .then(_ => {
             task.save()
-            .then(result => {
-                response.status(500).send(result)
+            .then(res => {
+                var resMsg = {
+                    message: "Created task!",
+                    data: task,
+                    result: res
+                };
+                response.status(201).send(resMsg);
+                // response.send(res);
             })
-            .catch(error => {
-                response.status(500).send(error);
+            .catch(err => {
+                var errMsg = {
+                    message: "Got server internal error!", 
+                    error: err
+                }
+                response.status(500).send(errMsg);
+                // response.status(500).send(err);
             });
         })
-        .catch(error => {
-            response.status(404).send(error);
+        .catch(err => {
+            var errMsg = {
+                message: "User not found!", 
+                error: err
+            }
+            response.status(404).send(errMsg);
+            // response.status(404).send(err);
         });
     } else {
         task.save()
-        .then(result => {
-            response.status(500).send(result)
+        .then(res => {
+            var resMsg = {
+                message: "Created task!",
+                data: task,
+                result: res
+            };
+            response.status(201).send(resMsg);
+            // response.send(res)
         })
-        .catch(error => {
-            response.status(500).send(error);
+        .catch(err => {
+            var errMsg = {
+                message: "Got server internal error!", 
+                error: err
+            }
+            response.status(500).send(errMsg);
+            // response.status(500).send(err);
         });
     }
 
@@ -378,19 +471,22 @@ router.get("/tasks/:id", async (request, response) => {
         if(docs === null || docs === undefined) {
             console.log('has error' + err);
             console.log('docs'  + docs);
-            response.status(404).send(err);
+            var errMsg = {
+                message: "User not found!", 
+                error: err
+            };
+            response.status(404).send(errMsg);
         } else {
             console.log('error' + err);
             console.log('has docs'  + docs);
-            response.send(docs);
+            var resMsg = {
+                message: "Ok",
+                data: docs
+            };
+            response.send(resMsg);
+            // response.send(docs);
         }
     });
-    // try {
-    //     var task = await TaskModel.findById(request.params.id).exec();
-    //     response.send(task);
-    // } catch (error) {
-    //     response.status(404).send(error);
-    // }
 });
 
 router.put("/tasks/:id", async (request, response) => {
@@ -407,7 +503,12 @@ router.put("/tasks/:id", async (request, response) => {
             console.log('error' + err);
             console.log('docs'  + docs);
             if(err || docs === null || docs === undefined) {
-                response.status(404).send(err);
+                var errMsg = {
+                    message: "User not found!", 
+                    error: err
+                }
+                response.status(404).send(errMsg);
+                // response.status(404).send(err);
             } else {
              
                 var newUser;
@@ -433,7 +534,12 @@ router.put("/tasks/:id", async (request, response) => {
                                 console.log('error' + err);
                                 console.log('docs'  + docs);
                                 if(err || docs === null || docs === undefined) {
-                                    response.status(404).send(err);
+                                    var errMsg = {
+                                        message: "User not found!", 
+                                        error: err
+                                    }
+                                    response.status(404).send(errMsg);
+                                    // response.status(404).send(err);
                                 } else {
                                     newUserName = docs.name;
                                 }});
@@ -511,7 +617,12 @@ router.delete("/tasks/:id", async (request, response) => {
         var result = await TaskModel.deleteOne({ _id: request.params.id }).exec();
         response.send(result);
     } catch (error) {
-        response.status(404).send(error);
+        var errMsg = {
+            message: "User not found!", 
+            error: err
+        }
+        response.status(404).send(errMsg);
+        // response.status(404).send(error);
     }
 });
 
