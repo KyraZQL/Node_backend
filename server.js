@@ -44,9 +44,16 @@ var TaskModel = require('./models/task')
 var userRoute = router.route('/users');
 var taskRoute = router.route('/tasks');
 
-// taskRoute.get(async (request, response) => {
+// taskRoute.delete(async (request, response) => {
 //     try{
-//     await TaskModel.deleteMany({}).exec();
+//         await TaskModel.deleteMany({}).exec();
+//     } catch(err) {
+
+//     }
+// });
+// userRoute.delete(async (request, response) => {
+//     try{
+//         await UserModel.deleteMany({}).exec();
 //     } catch(err) {
 
 //     }
@@ -55,7 +62,12 @@ var taskRoute = router.route('/tasks');
 userRoute.get(async (request, response) => {
 
     try {
-        var query = UserModel.find();
+        var query;
+        if(request.query.where) {
+            query = UserModel.find(JSON.parse(request.query.where));
+        } else {
+            query = UserModel.find();
+        }
         if(request.query.where) {
             query.where(JSON.parse(request.query.where));
             console.log('where' + JSON.parse(request.query.where));
@@ -245,24 +257,6 @@ router.put("/users/:id", async (request, response) => {
             }
         }
     });
-
-
-
-
-    // const userRes = UserModel.findById(request.params.id);
-    // if(!userRes) {
-    //     result.status(404).send('The user with given id was not found.');
-    // } else {
-    //     try {
-    //         var user = await userRes.exec();
-    //         //validation?????
-    //         user.set(request.body);
-    //         var result = await user.save();
-    //         response.send(result);
-    //     } catch (error) {
-    //         response.status(500).send(error);
-    //     }
-    // } 
 });
 router.delete("/users/:id", async (request, response) => {
 
@@ -312,10 +306,11 @@ router.delete("/users/:id", async (request, response) => {
 
 taskRoute.get(async (request, response) => {
     try {
-        var query = TaskModel.find();
+        var query;
         if(request.query.where) {
-            query.where(JSON.parse(request.query.where));
-            console.log('where' + JSON.parse(request.query.where));
+            query = TaskModel.find(JSON.parse(request.query.where));
+        } else {
+            query = TaskModel.find();
         }
         if(request.query.select) {
             query.select(JSON.parse(request.query.select));
@@ -340,7 +335,7 @@ taskRoute.get(async (request, response) => {
         };
         response.send(resMsg);
         // response.send(result);
-    } catch (error) {
+    } catch (err) {
         var errMsg = {
             message: "Got server internal error!", 
             error: err
