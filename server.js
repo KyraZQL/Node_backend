@@ -90,8 +90,12 @@ userRoute.get(async (request, response) => {
             data: result
         };
         response.send(resMsg);
-    } catch (error) {
-        response.status(500).send(error);
+    } catch (err) {
+        var errMsg = {
+            message: "Got error when creating user!",
+            error: err
+        };
+        response.status(500).send(errMsg);
     }
 });
 
@@ -165,95 +169,101 @@ router.get("/users/:id", async (request, response) => {
 
 router.put("/users/:id", async (request, response) => {
 
-    ////////////////////////////currently working on
-
     //remove all old tasks, and update the assigned user to be ''
     //add all new tasks, and update the assigned user to be new name
+    if(request.body._id) {
+        console.log('You cannot update the task id!');
+        var errMsg = {
+            message: "You cannot update the task id!", 
+            error: request.body
+        };
+        response.status(500).send(errMsg);
+    } else {
 
-    UserModel.findById(request.params.id, (err, docs) => {
-        if(err || docs === null || docs === undefined) {
-            console.log('has error' + err);
-            var errMsg = {
-                message: "User not found!", 
-                error: err
-            }
-            response.status(404).send(errMsg);
-        } else {
-
-            var oldTasks = docs.pendingTasks;
-             
-            console.log('put user request body' + request.body);
-            console.log('has docs'  + docs);
-
-            if(request.body.name === "" || request.body.email === "") {
-                console.log('try to delete the user\'s name or email.');
+        UserModel.findById(request.params.id, (err, docs) => {
+            if(err || docs === null || docs === undefined) {
+                console.log('has error' + err);
                 var errMsg = {
-                    message: "You cannot update the user without a name or email!", 
-                    error: request.body
+                    message: "User not found!", 
+                    error: err
                 }
-                response.status(500).send(errMsg);
+                response.status(404).send(errMsg);
             } else {
-                var name = docs.name;
-                if(request.body.name){
-                    name = request.body.name;
-                    console.log('update name to ' + name);
-                    if(oldTasks.length > 0) {
+                var oldTasks = docs.pendingTasks;
                 
-                        console.log('put user\'s name' + request.body.name);
+                console.log('put user request body' + request.body);
+                console.log('has docs'  + docs);
 
-                        TaskModel.updateMany({_id: {$in: oldTasks}}, 
-                            {assignedUserName: request.body.name}).exec()
-                        .catch(err => {
-                            console.log('update tasks got error' + err);
-                        });
-                    }
-                } 
-                if(request.body.pendingTasks) {
-                    var newTasks = request.body.pendingTasks;
-                    oldTasks = docs.pendingTasks;
-
-                    console.log('have to update pending tasks to ' + newTasks);
-                    console.log('have old tasks ' + oldTasks);
-
-                    if(oldTasks.length > 0) {
-                        TaskModel.updateMany({_id: {$in: oldTasks}}, 
-                            {assignedUser: "", assignedUserName: "unassigned"}).exec()
-                        .catch(err => {
-                            console.log('update tasks got error' + err);
-                        });
-                    }
-
-
-                    if(newTasks.length > 0) {
-                        console.log('show update the new oending tasks!!!!!!!!!!');
-                        TaskModel.updateMany({_id: {$in: newTasks}}, 
-                            {assignedUser: request.params.id, assignedUserName: name}).exec()
-                        .catch(err => {
-                            console.log('update tasks got error' + err);
-                        });
-                    }
-                }
-
-                UserModel.updateOne({_id: request.params.id}, 
-                    request.body
-                    )
-                .then( res => {
-                    var resMsg = {
-                        message: "Updated user!",
-                        data: request.body
-                    };
-                    response.send(resMsg);
-                })
-                .catch( err => {
+                if(request.body.name === "" || request.body.email === "") {
+                    console.log('try to delete the user\'s name or email.');
                     var errMsg = {
-                        message: "Got server internal error!", 
-                        error: err
+                        message: "You cannot update the user without a name or email!", 
+                        error: request.body
                     }
                     response.status(500).send(errMsg);
-                })
+                } else {
+                    var name = docs.name;
+                    if(request.body.name){
+                        name = request.body.name;
+                        console.log('update name to ' + name);
+                        if(oldTasks.length > 0) {
+                
+                            console.log('put user\'s name' + request.body.name);
+
+                            TaskModel.updateMany({_id: {$in: oldTasks}}, 
+                                {assignedUserName: request.body.name}).exec()
+                            .catch(err => {
+                                console.log('update tasks got error' + err);
+                            });
+                        }
+                    } 
+                    if(request.body.pendingTasks) {
+                        var newTasks = request.body.pendingTasks;
+                        oldTasks = docs.pendingTasks;
+
+                        console.log('have to update pending tasks to ' + newTasks);
+                        console.log('have old tasks ' + oldTasks);
+
+                        if(oldTasks.length > 0) {
+                            TaskModel.updateMany({_id: {$in: oldTasks}}, 
+                                {assignedUser: "", assignedUserName: "unassigned"}).exec()
+                            .catch(err => {
+                                console.log('update tasks got error' + err);
+                            });
+                        }
+
+
+                        if(newTasks.length > 0) {
+                            console.log('show update the new oending tasks!!!!!!!!!!');
+                            TaskModel.updateMany({_id: {$in: newTasks}}, 
+                                {assignedUser: request.params.id, assignedUserName: name}).exec()
+                            .catch(err => {
+                                console.log('update tasks got error' + err);
+                            });
+                        }
+                    }
+
+                    UserModel.updateOne({_id: request.params.id}, 
+                        request.body
+                        )
+                    .then( res => {
+                        var resMsg = {
+                            message: "Updated user!",
+                            data: request.body
+                        };
+                        response.send(resMsg);
+                    })
+                    .catch( err => {
+                        var errMsg = {
+                            message: "Got server internal error!", 
+                            error: err
+                        }
+                        response.status(500).send(errMsg);
+                    })
+                }
             }
-        }
-    });
+        });
+    }
 });
 router.delete("/users/:id", async (request, response) => {
 
@@ -316,6 +326,8 @@ taskRoute.get(async (request, response) => {
         if(request.query.limit) {
             query.limit(parseInt(request.query.limit));
             console.log('limit' + parseInt(request.query.limit));
+        } else {            
+            query.limit(100);
         }
         var result = await query.exec();
         var resMsg = {
@@ -339,49 +351,25 @@ taskRoute.post(async (request, response) => {
     a.dateCreated = new Date();
     var task = new TaskModel(a);
 
-    if(task.assignedUser) {
-        UserModel.findOne({_id: task.assignedUser})
-        .then(_ => {
-            UserModel.findOneAndUpdate({_id: task.assignedUser},
-                { "$push": { "pendingTasks": task._id } }
-            )
-            .then(res => {
-                console.log('after update assigned user object' + res);
-                task.assignedUserName = res.name;
-                console.log('task' + task);
-            })
-            .catch(error => {
-                response.status(500).send(error);
-            });
-        })
-        .then(_ => {
-            task.save()
-            .then(res => {
-                var resMsg = {
-                    message: "Created task!",
-                    data: res
-                };
-                response.status(201).send(resMsg);
-                // response.send(res);
-            })
-            .catch(err => {
-                var errMsg = {
-                    message: "Got server internal error!", 
-                    error: err
+    if(request.body.assignedUser !== undefined) {
+        console.log('assigned user' + request.body.assignedUser + typeof(request.body.assignedUser));
+        // UserModel.findOne({_id: task.assignedUser})
+        // .then(_ => {
+        UserModel.findOneAndUpdate({_id: request.body.assignedUser},
+            { "$push": { "pendingTasks": task._id } }, (err, docs) => {
+                if(err || docs === null || docs === undefined) {
+                    task.assignedUser = "";
+                    task.assignedUserName = "unassigned";
+                    console.log('Got error when updating the user: ' + err);
+                } else {
+                    console.log('after update assigned user object' + docs);
+                    task.assignedUserName = docs.name;
+                    console.log('task' + task);
                 }
-                response.status(500).send(errMsg);
-                // response.status(500).send(err);
-            });
-        })
-        .catch(err => {
-            var errMsg = {
-                message: "User not found!", 
-                error: err
             }
-            response.status(404).send(errMsg);
-            // response.status(404).send(err);
-        });
-    } else {
+        );
+    } 
+    // else {
         task.save()
         .then(res => {
             var resMsg = {
@@ -399,7 +387,7 @@ taskRoute.post(async (request, response) => {
             response.status(500).send(errMsg);
             // response.status(500).send(err);
         });
-    }
+    // }
 
 });
 
@@ -428,7 +416,11 @@ router.put("/tasks/:id", async (request, response) => {
     //update the related user's pending tasks
     if(request.body._id) {
         console.log('You cannot update the task id!');
-        response.status(500).send(request.body);
+        var errMsg = {
+            message: "You cannot update the task id!", 
+            error: request.body
+        };
+        response.status(500).send(errMsg);
     } else {
         try{
         var newInfo = request.body;
